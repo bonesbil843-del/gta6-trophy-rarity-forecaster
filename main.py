@@ -48,7 +48,7 @@ SPREAD_BUMP = 1.05        # mild calibration headroom
 STALE_TRIGGER_H = 2.0     # page staleness that counts as stale
 STALE_WINDOW_H = 24.0     # only inside the launch window
 STALE_SHIFT = -0.60       # logit shift for the pending refresh's dilution
-STALE_EXTRA = [-0.55, -0.25, 0.0, 0.15, 0.45]
+STALE_EXTRA = [-0.90, -0.45, 0.0, 0.25, 0.70]
 
 
 def clamp_pct(x: float) -> float:
@@ -281,6 +281,16 @@ def forecast_case(case: dict, name: str) -> dict:
             p_growth = math.exp(ln_p_fc - ln_p_last)
             if p_growth > 1.2:
                 shift = min(0.20, w_persist)
+                w_persist -= shift
+                w_struct += shift
+        # The mirror case: a pool that has stopped growing while a trophy's
+        # earned count still outgrows it — the rate will rise, so anchoring on
+        # the last read is wrong there too.
+        elif ln_p_fc is not None and ln_p_last is not None and l_struct is not None \
+                and u > -0.15:
+            p_growth = math.exp(ln_p_fc - ln_p_last)
+            if p_growth < 1.2 and (gamma - beta) > 0.3:
+                shift = min(0.15, w_persist)
                 w_persist -= shift
                 w_struct += shift
         if l_struct is None:
